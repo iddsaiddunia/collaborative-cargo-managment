@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "749975818539",
+    "project_id": "collaborative-cargo",
+    "storage_bucket": "collaborative-cargo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749975818539:android:c1e5b6c12284b163ae756e",
+        "android_client_info": {
+          "package_name": "com.example.collaborative_cargo_managment_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1QzfJN9x3HYCT_sjdvFOp5r_jjrmWKy4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749975818539:android:b0f970e0c32a4f69ae756e",
+        "android_client_info": {
+          "package_name": "com.example.pacel_trans_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1QzfJN9x3HYCT_sjdvFOp5r_jjrmWKy4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
