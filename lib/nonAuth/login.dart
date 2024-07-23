@@ -158,18 +158,20 @@ class _LoginPageState extends State<LoginPage> {
         SizedBox(
           height: 10.0,
         ),
-        Center(
-            child: GestureDetector(
-                onTap: () {
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(builder: (context) => RegistrationPage()),
-                  // );
-                },
-                child: Text(
-                  "Don't have an account?Sign Up",
-                  style: TextStyle(fontSize: 16),
-                )))
+        // Center(
+        //   child: GestureDetector(
+        //     onTap: () {
+        //       // Navigator.push(
+        //       //   context,
+        //       //   MaterialPageRoute(builder: (context) => RegistrationPage()),
+        //       // );
+        //     },
+        //     child: Text(
+        //       "Don't have an account?Sign Up",
+        //       style: TextStyle(fontSize: 16),
+        //     ),
+        //   ),
+        // ),
       ]),
     ));
   }
