@@ -29,6 +29,7 @@ class _HomePageState extends State<HomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late Future<Map<String, dynamic>?> _companyInfoFuture;
   User? user = FirebaseAuth.instance.currentUser;
+  String? companyID = "";
 
   Stream<QuerySnapshot>? _logisticOrdersStream;
 
@@ -68,6 +69,12 @@ class _HomePageState extends State<HomePage> {
       var operatorDoc = operatorSnapshot.docs.first;
       String companyId = operatorDoc['companyID'];
 
+      if (mounted) {
+        setState(() {
+          companyID = companyId;
+        });
+      }
+
       // Fetch company document based on company ID
       DocumentSnapshot companyDoc =
           await _firestore.collection('Companies').doc(companyId).get();
@@ -106,7 +113,7 @@ class _HomePageState extends State<HomePage> {
 
       QuerySnapshot routeSnapshot = await FirebaseFirestore.instance
           .collection('RoutesPolls')
-          .where('companyID', isEqualTo: companyId)
+          .where('operatorID', isEqualTo: user.uid)
           .get();
 
       if (routeSnapshot.docs.isEmpty) {
@@ -141,7 +148,7 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _logisticOrdersStream = FirebaseFirestore.instance
               .collection('LogisticOrders')
-              .where('companyID', isEqualTo: companyID)
+              .where('operatorID', isEqualTo: operatorID)
               .where('paymentStatus', isEqualTo: false)
               .snapshots();
         });
@@ -219,204 +226,221 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: FutureBuilder<Map<String, dynamic>?>(
-        future: _companyInfoFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data == null) {
-            return Center(child: Text('No company info found.'));
-          } else {
-            // Extract the company data
-            Map<String, dynamic> companyInfo = snapshot.data!;
-            return Text("${companyInfo['companyName']}");
-          }
-        },
-      )),
+        title: FutureBuilder<Map<String, dynamic>?>(
+          future: _companyInfoFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data == null) {
+              return Center(child: Text('No company info found.'));
+            } else {
+              // Extract the company data
+              Map<String, dynamic> companyInfo = snapshot.data!;
+              return Text("${companyInfo['companyName']}");
+            }
+          },
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              if (mounted) {
+                setState(() {
+                  _fetchCompanyRequests();
+                  _fetchRouteDetails();
+                });
+              }
+            },
+            icon: Icon(Icons.refresh),
+          ),
+        ],
+      ),
       drawer: Drawer(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-                width: double.infinity,
-                height: 170,
-                decoration: BoxDecoration(color: color.primaryColor),
-                child: SafeArea(
-                  child: FutureBuilder<Operator>(
-                    future: fetchOperatorInfo(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      } else if (!snapshot.hasData) {
-                        return Center(child: Text('No operator found'));
-                      } else {
-                        final operator = snapshot.data!;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0, vertical: 30),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 30,
+        child: FutureBuilder<Operator>(
+          future: fetchOperatorInfo(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData) {
+              return Center(child: Text('No operator found'));
+            } else {
+              final operator = snapshot.data!;
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                      width: double.infinity,
+                      height: 170,
+                      decoration: BoxDecoration(color: color.primaryColor),
+                      child: SafeArea(
+                          child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0, vertical: 30),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "${operator.operatorName}",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white),
+                                  ),
+                                  Text(
+                                    "${operator.email}",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w200,
+                                        color: Colors.white),
+                                  ),
+                                  Text(
+                                    "${operator.role}",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w200,
+                                        color: Colors.white),
+                                  ),
+                                ],
                               ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "${operator.operatorName}",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white),
-                                    ),
-                                    Text(
-                                      "${operator.email}",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w200,
-                                          color: Colors.white),
-                                    ),
-                                    Text(
-                                      "${operator.role}",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w200,
-                                          color: Colors.white),
-                                    ),
-                                  ],
+                            )
+                          ],
+                        ),
+                      ))),
+                  Expanded(
+                    child: Container(
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: 20,
+                          ),
+                          (operator.role != "Manager")
+                              ? Container()
+                              : DrawerTile(
+                                  title: "Users",
+                                  ontap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            UsersPage(companyID: companyID!),
+                                      ),
+                                    );
+                                  },
+                                  icon: Icons.person_3_outlined,
                                 ),
-                              )
-                            ],
+                          DrawerTile(
+                            title: "Orders",
+                            ontap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => OrdersPage(),
+                                ),
+                              );
+                            },
+                            icon: Icons.add_chart,
                           ),
-                        );
-                      }
-                    },
-                  ),
-                )),
-            Expanded(
-              child: Container(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 20,
-                    ),
-                    DrawerTile(
-                      title: "Users",
-                      ontap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RegisterPage(),
-                          ),
-                        );
-                      },
-                      icon: Icons.person_3_outlined,
-                    ),
-                    DrawerTile(
-                      title: "Orders",
-                      ontap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => OrdersPage(),
-                          ),
-                        );
-                      },
-                      icon: Icons.add_chart,
-                    ),
-                    // DrawerTile(
-                    //   title: "Transactions",
-                    //   ontap: () {
-                    //     Navigator.push(
-                    //       context,
-                    //       MaterialPageRoute(
-                    //         builder: (context) => TransactionPage(),
-                    //       ),
-                    //     );
-                    //   },
-                    //   icon: Icons.monetization_on_outlined,
-                    // ),
-                    // DrawerTile(
-                    //   title: "Savings",
-                    //   ontap: () {
-                    //     Navigator.push(
-                    //       context,
-                    //       MaterialPageRoute(
-                    //         builder: (context) => SavingsPage(),
-                    //       ),
-                    //     );
-                    //   },
-                    //   icon: Icons.lightbulb_circle_outlined,
-                    // ),
-                    // DrawerTile(
-                    //   title: "Loans",
-                    //   ontap: () {
-                    //     Navigator.push(
-                    //       context,
-                    //       MaterialPageRoute(
-                    //         builder: (context) => LoansPage(),
-                    //       ),
-                    //     );
-                    //   },
-                    //   icon: Icons.list_alt_outlined,
-                    // ),
-                    // DrawerTile(
-                    //   title: "About",
-                    //   ontap: () {
-                    //     Navigator.push(
-                    //       context,
-                    //       MaterialPageRoute(
-                    //         builder: (context) => AboutPage(),
-                    //       ),
-                    //     );
-                    //   },
-                    //   icon: Icons.question_answer_outlined,
-                    // ),
-                  ],
-                ),
-              ),
-            ),
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: MaterialButton(
-                      minWidth: 120,
-                      height: 50,
-                      elevation: 0,
-                      color: _colorTheme.primaryColor,
-                      child: Row(
-                        children: [Icon(Icons.logout), Text("LogOut")],
+                          // DrawerTile(
+                          //   title: "Transactions",
+                          //   ontap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => TransactionPage(),
+                          //       ),
+                          //     );
+                          //   },
+                          //   icon: Icons.monetization_on_outlined,
+                          // ),
+                          // DrawerTile(
+                          //   title: "Savings",
+                          //   ontap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => SavingsPage(),
+                          //       ),
+                          //     );
+                          //   },
+                          //   icon: Icons.lightbulb_circle_outlined,
+                          // ),
+                          // DrawerTile(
+                          //   title: "Loans",
+                          //   ontap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => LoansPage(),
+                          //       ),
+                          //     );
+                          //   },
+                          //   icon: Icons.list_alt_outlined,
+                          // ),
+                          // DrawerTile(
+                          //   title: "About",
+                          //   ontap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => AboutPage(),
+                          //       ),
+                          //     );
+                          //   },
+                          //   icon: Icons.question_answer_outlined,
+                          // ),
+                        ],
                       ),
-                      onPressed: () async {
-                        await _authService.signOutUser();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Wrapper(isSignedIn: false),
-                          ),
-                        );
-                      }),
-                ),
-                SizedBox(
-                  height: 20,
-                ),
-                // Text("Developed by/S.G4"),
-                Text(
-                  "2024@ collabo All rights reserved",
-                  style: TextStyle(color: Colors.black87, fontSize: 11),
-                ),
-                SizedBox(
-                  height: 20,
-                ),
-              ],
-            ),
-          ],
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: MaterialButton(
+                            minWidth: 120,
+                            height: 50,
+                            elevation: 0,
+                            color: _colorTheme.primaryColor,
+                            child: Row(
+                              children: [Icon(Icons.logout), Text("LogOut")],
+                            ),
+                            onPressed: () async {
+                              await _authService.signOutUser();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      Wrapper(isSignedIn: false),
+                                ),
+                              );
+                            }),
+                      ),
+                      SizedBox(
+                        height: 20,
+                      ),
+                      // Text("Developed by/S.G4"),
+                      Text(
+                        "2024@ collabo All rights reserved",
+                        style: TextStyle(color: Colors.black87, fontSize: 11),
+                      ),
+                      SizedBox(
+                        height: 20,
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            }
+          },
         ),
       ),
       body: Padding(

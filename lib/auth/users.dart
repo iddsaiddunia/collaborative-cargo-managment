@@ -1,82 +1,174 @@
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collaborative_cargo_managment_app/models/operator.dart';
 import 'package:collaborative_cargo_managment_app/services/auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class RegisterPage extends StatefulWidget {
+class UsersPage extends StatefulWidget {
+  final String companyID;
+
+  UsersPage({required this.companyID});
+
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  State<UsersPage> createState() => _UsersPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final _formKey = GlobalKey<FormState>();
-  final AuthService _authServices = AuthService();
+class _UsersPageState extends State<UsersPage> {
 
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _operatorNameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _companyIDController = TextEditingController();
-
+  Stream<List<Operator>> fetchUsersByCompany(String companyID) {
+  return FirebaseFirestore.instance
+      .collection('Operators')
+      .where('companyID', isEqualTo: companyID)
+      .snapshots()
+      .map((snapshot) =>
+          snapshot.docs.map((doc) => Operator.fromDocument(doc)).toList());
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Register'),
+        title: Text('Users'),
       ),
-      body: Form(
+      body: StreamBuilder<List<Operator>>(
+        stream: fetchUsersByCompany(widget.companyID),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No users available'));
+          }
+
+          final users = snapshot.data!;
+
+          return ListView.builder(
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final user = users[index];
+              return ListTile(
+                title: Text(user.operatorName),
+                subtitle: Text(user.email),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AddUserDialog(companyID: widget.companyID),
+          );
+        },
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+
+class AddUserDialog extends StatefulWidget {
+  final String companyID;
+
+  AddUserDialog({required this.companyID});
+
+  @override
+  _AddUserDialogState createState() => _AddUserDialogState();
+}
+
+class _AddUserDialogState extends State<AddUserDialog> {
+  final _formKey = GlobalKey<FormState>();
+  String email = '';
+  String operatorName = '';
+  String phone = '';
+  String role = 'normal';
+
+  Future<void> _createUser() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      try {
+        UserCredential userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: 'password123', // Note: use a secure method for passwords
+        );
+
+        await FirebaseFirestore.instance
+            .collection('Operators')
+            .doc(userCredential.user!.uid)
+            .set({
+          'companyID': widget.companyID,
+          'email': email,
+          'operatorID': userCredential.user!.uid,
+          'operatorName': operatorName,
+          'phone': phone,
+          'role': role,
+        });
+
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('User created successfully')));
+      } catch (e) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to create user: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Add User'),
+      content: Form(
         key: _formKey,
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-                validator: (value) => value!.isEmpty ? 'Enter an email' : null,
-              ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) => value!.length < 6 ? 'Enter a password 6+ chars long' : null,
-              ),
-              TextFormField(
-                controller: _operatorNameController,
-                decoration: InputDecoration(labelText: 'Operator Name'),
-                validator: (value) => value!.isEmpty ? 'Enter the operator name' : null,
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(labelText: 'Phone'),
-                validator: (value) => value!.isEmpty ? 'Enter the phone number' : null,
-              ),
-              TextFormField(
-                controller: _companyIDController,
-                decoration: InputDecoration(labelText: 'Company ID'),
-                validator: (value) => value!.isEmpty ? 'Enter the company ID' : null,
-              ),
-              SizedBox(height: 20.0),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    try {
-                      await _authServices.registerUser(
-                        email: _emailController.text.trim(),
-                        password: _passwordController.text.trim(),
-                        operatorName: _operatorNameController.text.trim(),
-                        phone: _phoneController.text.trim(),
-                        companyID: _companyIDController.text.trim(),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User registered successfully')));
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to register user: $e')));
-                    }
-                  }
-                },
-                child: Text('Register'),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Email'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter an email';
+                }
+                return null;
+              },
+              onSaved: (value) {
+                email = value!;
+              },
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Name'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a name';
+                }
+                return null;
+              },
+              onSaved: (value) {
+                operatorName = value!;
+              },
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Phone'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a phone number';
+                }
+                return null;
+              },
+              onSaved: (value) {
+                phone = value!;
+              },
+            ),
+            ElevatedButton(
+              onPressed: _createUser,
+              child: Text('Add User'),
+            ),
+          ],
         ),
       ),
     );

@@ -40,7 +40,7 @@ class _OrdersPageState extends State<OrdersPage> {
         // Fetch logistic orders where companyID matches
         QuerySnapshot logisticOrdersSnapshot = await FirebaseFirestore.instance
             .collection('LogisticOrders')
-            .where('companyID', isEqualTo: companyID)
+            .where('operatorID', isEqualTo: operatorID)
             .get();
 
         // Convert to List of Maps and fetch corresponding client and route details
@@ -130,7 +130,8 @@ class _OrdersPageState extends State<OrdersPage> {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No logistic orders found'));
+            return Center(
+                child: Text('No logistic orders found for this operator'));
           } else {
             List<Map<String, dynamic>> logisticOrdersWithClientsAndRoutes =
                 snapshot.data!;
