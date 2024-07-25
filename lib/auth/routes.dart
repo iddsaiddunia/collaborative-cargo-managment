@@ -62,7 +62,7 @@ class _RoutesPageState extends State<RoutesPage> {
         _firestore.collection('RoutesPolls').doc(_routeId);
 
     await routeDoc.update({
-      'locationList': FieldValue.arrayUnion([location])
+      'ArrivedLocationList': FieldValue.arrayUnion([location])
     });
 
     setState(() {
@@ -157,6 +157,16 @@ class _RoutesPageState extends State<RoutesPage> {
           Map<String, dynamic> routeDetails = snapshot.data!;
           int orderCount = routeDetails['orderCount'];
 
+          List<dynamic> arrivedLocationList =
+              routeDetails['ArrivedLocationList'];
+
+          String lastLocation;
+          if (arrivedLocationList.isNotEmpty) {
+            lastLocation = arrivedLocationList.last;
+          } else {
+            lastLocation = 'No locations arrived yet';
+          }
+
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 10),
             child: Column(
@@ -203,8 +213,7 @@ class _RoutesPageState extends State<RoutesPage> {
                 SizedBox(
                   height: 20,
                 ),
-                (routeDetails['depatureStatus'] != "depatured" ||
-                        routeDetails['depatureStatus'] != "arrived")
+                (routeDetails['depatureStatus'] == "waiting")
                     ? MaterialButton(
                         color: color.primaryColor,
                         onPressed: () {
@@ -222,7 +231,7 @@ class _RoutesPageState extends State<RoutesPage> {
                 Container(
                   child: Column(
                     children: [
-                      Text("Current Location: Dodoma"),
+                      Text("Current Location: $lastLocation"),
                       MaterialButton(
                         color: color.primaryColor,
                         onPressed: () async {

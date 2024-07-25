@@ -69,11 +69,15 @@ class _AddRoutePollsState extends State<AddRoutePolls> {
         'trackInfo': _trackInfoController.text,
         'chargesPerTon': double.parse(_chargesPerTonController.text),
         'depatureTime': _departureTime,
+        'ArrivedLocationList': [],
+        'route': [],
         'arrivalTime': _arrivalTime,
         'createdAt': Timestamp.now(),
         'depatureStatus': "waiting",
-        'totalSpace':
-            _spaceController, // Assuming total space is a constant value, update as needed
+        'totalSpace': double.parse(_spaceController
+            .text), // Assuming total space is a constant value, update as needed
+        'remainingSpace': double.parse(_spaceController
+            .text), // Assuming total space is a constant value, update as needed
       };
 
       await FirebaseFirestore.instance.collection('RoutesPolls').add(routeData);

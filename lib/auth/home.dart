@@ -3,7 +3,9 @@ import 'package:collaborative_cargo_managment_app/auth/add_route.dart';
 import 'package:collaborative_cargo_managment_app/auth/orders.dart';
 import 'package:collaborative_cargo_managment_app/auth/request.dart';
 import 'package:collaborative_cargo_managment_app/auth/routes.dart';
+import 'package:collaborative_cargo_managment_app/auth/users.dart';
 import 'package:collaborative_cargo_managment_app/color_themes.dart';
+import 'package:collaborative_cargo_managment_app/models/operator.dart';
 import 'package:collaborative_cargo_managment_app/services/auth.dart';
 import 'package:collaborative_cargo_managment_app/wrapper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -41,6 +43,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _companyInfoFuture = _fetchCompanyInfo();
     _fetchCompanyRequests();
+    fetchOperatorInfo();
   }
 
   Future<Map<String, dynamic>?> _fetchCompanyInfo() async {
@@ -198,6 +201,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<Operator> fetchOperatorInfo() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser!;
+    final operatorDoc = await FirebaseFirestore.instance
+        .collection('Operators')
+        .doc(firebaseUser.uid)
+        .get();
+
+    if (operatorDoc.exists) {
+      return Operator.fromDocument(operatorDoc);
+    } else {
+      throw Exception('Operator not found');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -223,44 +240,64 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
-              width: double.infinity,
-              height: 150,
-              decoration: BoxDecoration(color: color.primaryColor),
-              child: SafeArea(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8.0, vertical: 30),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "John Doe",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white),
-                            ),
-                            Text(
-                              "johndoe@mail.com",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w200,
-                                  color: Colors.white),
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
+                width: double.infinity,
+                height: 170,
+                decoration: BoxDecoration(color: color.primaryColor),
+                child: SafeArea(
+                  child: FutureBuilder<Operator>(
+                    future: fetchOperatorInfo(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      } else if (!snapshot.hasData) {
+                        return Center(child: Text('No operator found'));
+                      } else {
+                        final operator = snapshot.data!;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0, vertical: 30),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 30,
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "${operator.operatorName}",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white),
+                                    ),
+                                    Text(
+                                      "${operator.email}",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w200,
+                                          color: Colors.white),
+                                    ),
+                                    Text(
+                                      "${operator.role}",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w200,
+                                          color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        );
+                      }
+                    },
                   ),
-                ),
-              ),
-            ),
+                )),
             Expanded(
               child: Container(
                 child: Column(
@@ -268,18 +305,18 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(
                       height: 20,
                     ),
-                    // DrawerTile(
-                    //   title: "Requests",
-                    //   ontap: () {
-                    //     // Navigator.push(
-                    //     //   context,
-                    //     //   MaterialPageRoute(
-                    //     //     builder: (context) => ProfilePage(),
-                    //     //   ),
-                    //     // );
-                    //   },
-                    //   icon: Icons.person_3_outlined,
-                    // ),
+                    DrawerTile(
+                      title: "Users",
+                      ontap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RegisterPage(),
+                          ),
+                        );
+                      },
+                      icon: Icons.person_3_outlined,
+                    ),
                     DrawerTile(
                       title: "Orders",
                       ontap: () {
@@ -547,8 +584,7 @@ class _HomePageState extends State<HomePage> {
                                             children: [
                                               verticalTextTIle(
                                                 title: "orderNo",
-                                                content:
-                                                    "47CFC4P2MJKWPTCRFYICM",
+                                                content: order['orderNo'],
                                               ),
                                               Row(
                                                 children: [
@@ -704,6 +740,8 @@ class _HomePageState extends State<HomePage> {
                         itemBuilder: (context, index) {
                           var route = routes[index];
                           String routeId = route['routeId'];
+                          double remainingCapacity =
+                              route['remainingSpace'] ?? 0;
                           return GestureDetector(
                             onTap: () {
                               Navigator.push(
@@ -757,7 +795,7 @@ class _HomePageState extends State<HomePage> {
                                       verticalTextTIle(
                                         title: "A/capacity",
                                         content:
-                                            "${route['remainingSpace']} Ton",
+                                            "${remainingCapacity.toStringAsFixed(1)} Ton",
                                       ),
                                     ],
                                   ),
